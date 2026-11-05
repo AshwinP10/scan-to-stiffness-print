@@ -1,0 +1,96 @@
+# =====================================================================================================
+#  scan_to_print.py settings.  Edit this file (or pass --config my_settings.toml) instead of the code.
+#  Every value here can also be overridden on the command line; run  python scan_to_print.py --help
+# =====================================================================================================
+
+[scan]
+# Units of the mesh file. "auto" = metres if the model is under 5 units across (RealityScan, Polycam,
+# glTF), otherwise millimetres.
+units = "auto"
+# Which axis is "up" in the mesh file: "auto" (glTF/.glb -> y, everything else -> z), "z" or "y".
+# RealityScan/RealityCapture OBJ exports referenced to markers/AprilTags are z-up.
+up_axis = "auto"
+# Print scale after unit conversion (1.0 = same size as the real object).
+scale = 1.0
+# Instead of scale: make the largest dimension exactly this many mm (0 = off). Use it for scans that have
+# no real-world scale (phone photogrammetry without markers).
+fit_largest_mm = 0
+# Very dense scans are simplified to this many triangles first (keeps everything fast).
+max_faces = 300000
+
+[points]
+# Units of the x, y, z columns in the points file: "mm", "m", or "auto" (tries mm and m, keeps whichever
+# lands on the mesh surface).
+units = "auto"
+# A point further than this from the mesh surface (mm) is treated as an error (wrong file or frame).
+surface_tolerance_mm = 3.0
+
+[mapping]
+# How measured stiffness k (N/mm) turns into infill density (%).
+#   "linear": k_min -> infill_min, k_max -> infill_max, clipped outside that range.
+#   "table":  piecewise-linear through the [mapping.table] pairs below (use your calibration-block data).
+mode = "linear"
+k_min = 0.5
+k_max = 3.0
+infill_min = 10.0
+infill_max = 90.0
+# Calibration table for mode = "table": measured k on each calibration-block patch and its infill.
+# Must be sorted by k. Example values only. Replace them with your measurements.
+table_k      = [0.45, 0.80, 1.20, 1.70, 2.30, 3.00]
+table_infill = [10.0, 20.0, 35.0, 50.0, 70.0, 85.0]
+
+[regions]
+# Voxel size for the region map (mm). 0 = automatic (largest dimension / 60).
+voxel_mm = 0
+# "auto": column regions when every probe point is on a top surface, otherwise full 3D regions.
+# "columns": each point owns the material straight below it.  "3d": nearest point in 3D.
+partition = "auto"
+
+[output]
+# Which files to write. Any combination of:
+#   "bambu_project"  .3mf to open and slice yourself in Bambu Studio (settings below pre-loaded)
+#   "bambu_sliced"   .gcode.3mf sliced by the Bambu Studio CLI, ready to print (needs Bambu Studio)
+#   "prusa_project"  .3mf for PrusaSlicer (one part per region, infill per part)
+#   "stl"            the cleaned, watertight model as one .stl (uniform infill in any slicer)
+#   "region_stls"    one .stl per region + infill_map.csv (import into any slicer as one object)
+formats = ["bambu_project", "bambu_sliced", "stl", "region_stls"]
+# Check the infill actually in the sliced G-code against the targets (only with bambu_sliced).
+verify = true
+folder = "out_print"
+
+[bambu]
+# Names exactly as in Bambu Studio (run  python scan_to_print.py --list-bambu-profiles  to see them).
+printer  = "Bambu Lab P1S 0.4 nozzle"
+process  = "0.20mm Standard @BBL X1C"      # Bambu's stock 0.20 mm process for the P1S 0.4 mm nozzle
+filament = "Generic TPU"
+plate    = "Textured PEI Plate"            # "Cool Plate", "Engineering Plate", "High Temp Plate", "Textured PEI Plate"
+# Path to bambu-studio(.exe). "" = look in the usual install locations (Windows / macOS / Linux).
+executable = ""
+# Bed centre the part is placed at (P1S / X1 bed is 256 x 256 mm).
+bed_centre_mm = [128.0, 128.0]
+
+[print]
+# Thin skins so the infill dominates how soft the print feels.
+top_shell_layers = 2
+bottom_shell_layers = 2
+wall_loops = 2
+top_surface_pattern = "monotonic"          # monotonic, monotonicline, zig-zag (rectilinear), concentric, ...
+bottom_surface_pattern = "monotonic"
+# Infill pattern inside every region: rectilinear, grid, gyroid, honeycomb, cubic, triangles, line, ...
+infill_pattern = "rectilinear"
+
+# Any other Bambu Studio setting, by its internal key (open a Bambu .3mf as a zip and look in
+# Metadata/project_settings.config for names). Applied last, so it wins over everything above.
+[bambu.process_overrides]
+# No anchor lines where infill meets walls: with them every region prints 2-4 % points denser than asked
+# (they add material along every region edge); without them the example lands within 0.6 % points.
+sparse_infill_anchor = "0"
+sparse_infill_anchor_max = "0"
+# outer_wall_speed = "40"
+
+[bambu.filament_overrides]
+# nozzle_temperature = ["230"]
+
+[prusa]
+# PrusaSlicer profile (.ini) used for the bed centre of prusa_project.
+profile = "profiles/prusaslicer_2.5.0_tpu_generic_flex.ini"

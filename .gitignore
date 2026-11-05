@@ -1,0 +1,28 @@
+# Run outputs (regenerate them; sliced files are tens of MB)
+out/
+out_scan/
+out_bambu/
+out_print/
+calibration_block/run_*/
+# Presentation material (contains third-party scan screenshots), kept local
+midpoint_diagrams/
+
+# Your own scans and probe data (keep them local, or remove these lines to share them)
+scans/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Big or generated files
+*.gcode
+*.gcode.3mf
+*.bgcode
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

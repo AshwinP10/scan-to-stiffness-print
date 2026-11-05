@@ -1,0 +1,22 @@
+# Core (scan_to_print.py, make_calibration_block.py)
+numpy>=1.26
+scipy>=1.11
+trimesh>=4.0
+shapely>=2.1
+scikit-image>=0.22
+pymeshfix>=0.16          # watertight repair of scans
+manifold3d>=2.4          # boolean split into one solid per region
+fast-simplification>=0.1 # simplifying very dense scans
+matplotlib>=3.8
+
+# Point picker (pick_points.py)
+open3d>=0.18
+
+# Optional
+# pandas>=2.0 and openpyxl>=3.1   -> read probe points from .xlsx
+# pycollada>=0.8                  -> read .dae scans
+# plotly>=5                       -> interactive 3D toolpath view in scan_to_infill.py
+
+# External programs
+#   Bambu Studio (bambulab.com)   -> bambu_project / bambu_sliced outputs. Tested with 01.07.07.89.
+#   PrusaSlicer 2.5.0             -> only for the older scan_to_infill.py / calibration-block verification

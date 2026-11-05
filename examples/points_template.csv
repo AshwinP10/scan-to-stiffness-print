@@ -1,0 +1,2 @@
+id,x,y,z,stiffness
+# x, y, z in mm (from pick_points.py); stiffness in N/mm from the probe
