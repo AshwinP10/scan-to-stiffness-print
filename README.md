@@ -353,7 +353,7 @@ low-density regions don't have room for. Switch with `infill_pattern` if your re
 
 | Type | Read? | Notes |
 |---|---|---|
-| `.obj` | ✅ | Best choice. Textures (`.mtl`, images) are ignored and not needed. |
+| `.obj` | ✅ | Best choice. Textures (`.mtl`, images) and vertex colours are ignored and not needed. Large files use a fast reader. |
 | `.glb` / `.gltf` | ✅ | Y-up by the glTF standard; the code turns it Z-up automatically. |
 | `.ply` | ✅ | Must be a **mesh**. A point-cloud PLY is rejected with a message. |
 | `.stl` | ✅ | |
@@ -445,5 +445,5 @@ add its name to `FORMATS`, and call it in `main()` next to the others.
 | `No Bambu process profile named ...` | Copy the exact name from `--list-bambu-profiles`. |
 | `Bambu Studio CLI exited ...` | Open the `.log` named in the message (in `bambu_profiles/` of the run folder); `process not compatible with printer` means the process name doesn't match the printer. |
 | Verification shows +2 to +4 % points everywhere | Infill anchor lines are back on. `config.toml` turns them off by default (`sparse_infill_anchor` and `sparse_infill_anchor_max` = `"0"` under `[bambu.process_overrides]`); check those lines are still there. |
-| Very slow on a huge scan | Lower `[scan] max_faces`, or raise `[regions] voxel_mm`. |
+| Very slow on a huge scan | Big RealityScan OBJs (hundreds of MB, millions of triangles) are read by a fast built-in reader (a 456 MB, 6.5 M-triangle scan loads in ~30 s) and simplified to `[scan] max_faces`. If it is still slow, lower `max_faces` or raise `[regions] voxel_mm`. Keep the laptop awake for long runs. |
 | `Reading Excel needs ...` | `pip install -U pandas openpyxl`, or save the sheet as CSV. |

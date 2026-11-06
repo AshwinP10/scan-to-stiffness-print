@@ -47,6 +47,41 @@ def _pick_from_zip(path, tmp):
     raise ScanError(f"{path.name} contains no mesh this tool reads (found {found}). Supported: {MESH_TYPES}")
 
 
+FAST_OBJ_BYTES = 20_000_000     # OBJ files bigger than this use the numpy reader below
+
+
+def _fast_obj(path):
+    """Vertices + faces of a large OBJ with plain numpy (trimesh's reader takes many minutes on a 450 MB scan).
+
+    Handles 'v x y z [r g b]', 'f a b c', 'f a/b/c ...', negative indices and polygons (fan-triangulated).
+    Returns None if the file uses anything else, so the caller can fall back to trimesh.
+    """
+    data = Path(path).read_bytes()
+    lines = data.split(b"\n")
+    v_lines = [ln for ln in lines if ln.startswith(b"v ")]
+    f_lines = [ln for ln in lines if ln.startswith(b"f ")]
+    if not v_lines or not f_lines:
+        return None
+    # x y z only (RealityScan appends r g b vertex colours)
+    verts = np.array(b" ".join(b" ".join(ln.split()[1:4]) for ln in v_lines).split(), dtype=float).reshape(-1, 3)
+    faces = None
+    if all(len(ln.split()) == 4 for ln in f_lines):                 # all triangles: one vectorised parse
+        tok = b" ".join(ln[2:] for ln in f_lines).split()
+        if b"/" in tok[0]:
+            tok = [t.split(b"/")[0] for t in tok]
+        faces = np.array(tok, dtype=np.int64).reshape(-1, 3)
+    else:                                                            # quads / polygons: fan-triangulate
+        tris = []
+        for ln in f_lines:
+            idx = [int(t.split(b"/")[0]) for t in ln.split()[1:]]
+            tris += [(idx[0], idx[i], idx[i + 1]) for i in range(1, len(idx) - 1)]
+        faces = np.array(tris, dtype=np.int64)
+    faces = np.where(faces < 0, faces + len(verts), faces - 1)       # OBJ is 1-based; negatives count back
+    if faces.min() < 0 or faces.max() >= len(verts):
+        return None
+    return verts, faces
+
+
 def read_mesh(path):
     """Geometry of a scan file as one triangle mesh in the file's own units and axes.
 
@@ -73,6 +108,14 @@ def read_mesh(path):
             raise ScanError("Reading .dae needs pycollada:  pip install pycollada  (or re-export as .obj)")
     if ext not in MESH_TYPES:
         raise ScanError(f"Unknown file type '{ext}'. Supported: {MESH_TYPES + ['.zip']}")
+    if ext == ".obj" and path.stat().st_size > FAST_OBJ_BYTES:
+        try:
+            fast = _fast_obj(path)
+        except (ValueError, IndexError):
+            fast = None
+        if fast is not None:
+            return trimesh.Trimesh(fast[0], fast[1], process=True), ext
+        print("  large OBJ uses features the fast reader skips; using trimesh (slow)")
     loaded = trimesh.load(path, force="mesh", process=False)
     if isinstance(loaded, trimesh.PointCloud) or not hasattr(loaded, "faces") or len(loaded.faces) == 0:
         raise ScanError(f"{path.name} is a point cloud (no triangles). Export a *mesh* from the scanning app, "
